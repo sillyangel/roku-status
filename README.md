@@ -18,6 +18,8 @@ Environment
 - `STATUS_URL` — optional HTTP endpoint that returns JSON `{ "on": true, "app": "AppName" }`.
 - `POLL_MS` — polling interval in milliseconds (default 5000).
  - `DEBUG` — logging mode: `both` to show Roku+Discord logs, `roku` to show Roku logs only, `discord` to show Discord logs only. `true` or `1` enables both.
+ - `DISCORD_CLIENT_ID` — (optional) your Discord Application Client ID. Required to upload external images so they can be used as presence assets. If unset, the app will attempt to use the raw image URL but Discord may not display it.
+ - `IMAGE_URL` — (optional) URL of the image to use as the presence large image. Defaults to a GitHub avatar.
 
 Notes
 

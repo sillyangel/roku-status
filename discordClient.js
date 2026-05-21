@@ -2,8 +2,9 @@ const WebSocket = require('ws')
 
 class DiscordClient {
   constructor(debug = false) {
-    // compatibility: second arg imageUrl may be provided; handled below
+    // compatibility: second arg imageUrl and third arg clientId may be provided; handled below
     const imageUrl = arguments[1]
+    const clientId = arguments[2]
     this.ws = null
     this.heartbeatInterval = null
     this.heartbeatTimer = null
@@ -12,10 +13,15 @@ class DiscordClient {
     this.connected = false
     this.debug = !!debug
     this.imageUrl = imageUrl || ''
+    this.clientId = clientId || ''
+    this.processedImage = null
     this.startedAt = null // epoch ms when device powered on
   }
 
   connect(token) {
+    // store token for later API calls
+    this.token = token
+
     return new Promise((resolve, reject) => {
       if (!token) return reject(new Error('DISCORD_TOKEN is required'))
 
@@ -107,6 +113,35 @@ class DiscordClient {
     this.ws.send(JSON.stringify(payload))
   }
 
+  
+
+  async processImageIfNeeded() {
+    if (!this.imageUrl || this.processedImage) return
+    if (!this.clientId || !this.token) {
+      if (this.debug) console.warn('[DISCORD] missing clientId or token, cannot upload image')
+      return
+    }
+
+    try {
+      const body = JSON.stringify({urls: [this.imageUrl]})
+      const res = await fetch(`https://discord.com/api/v9/applications/${this.clientId}/external-assets`, {
+        method: 'POST',
+        headers: {Authorization: this.token, 'Content-Type': 'application/json'},
+        body
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      if (Array.isArray(data) && data[0] && data[0].external_asset_path) {
+        this.processedImage = `mp:${data[0].external_asset_path}`
+        if (this.debug) console.log('[DISCORD] uploaded image ->', this.processedImage)
+      } else {
+        if (this.debug) console.warn('[DISCORD] unexpected response uploading image', JSON.stringify(data))
+      }
+    } catch (err) {
+      if (this.debug) console.error('[DISCORD] failed to upload image', err && err.message)
+    }
+  }
+
   async updatePresence({on, app, model}) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
     if (!on) {
@@ -117,6 +152,8 @@ class DiscordClient {
     // set startedAt when device first powers on; keep across app switches
     if (!this.startedAt) this.startedAt = Date.now()
 
+    await this.processImageIfNeeded()
+
     const activity = {
       name: model || (app || 'App'),
       type: 0,
@@ -125,7 +162,7 @@ class DiscordClient {
       // Discord expects timestamps in milliseconds
       timestamps: {start: this.startedAt},
       assets: {
-        large_image: this.imageUrl || undefined,
+        large_image: this.processedImage || undefined,
         large_text: model || ''
       }
     }
