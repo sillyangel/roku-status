@@ -40,6 +40,10 @@ class StatusClient {
       const on = !!pm && /poweron/i.test(pm)
       if (this.debug) console.log('[ROKU] parsed power-mode ->', JSON.stringify(pm), 'on=', on)
 
+      // parse model name
+      const model = this._extractTag(devText, 'model-name') || this._extractTag(devText, 'model') || ''
+      if (this.debug && model) console.log('[ROKU] parsed model ->', JSON.stringify(model))
+
       // parse app name from active-app XML
       let app = ''
       if (appText) {
@@ -51,7 +55,7 @@ class StatusClient {
         }
       }
 
-      const out = {on, app}
+      const out = {on, app, model}
       this._last = out
       return out
     } catch (err) {

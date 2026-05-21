@@ -8,6 +8,7 @@ const POLL_MS = parseInt(process.env.POLL_MS || '5000', 10)
 const DEBUG_RAW = (process.env.DEBUG || '').toString().toLowerCase()
 const debugRoku = DEBUG_RAW === 'both' || DEBUG_RAW === 'roku' || DEBUG_RAW === '1' || DEBUG_RAW === 'true'
 const debugDiscord = DEBUG_RAW === 'both' || DEBUG_RAW === 'discord' || DEBUG_RAW === '1' || DEBUG_RAW === 'true'
+const IMAGE_URL = process.env.IMAGE_URL || 'https://avatars.githubusercontent.com/u/50461810'
 
 if (!DISCORD_TOKEN) {
   console.error('Please set DISCORD_TOKEN in .env or environment')
@@ -15,7 +16,7 @@ if (!DISCORD_TOKEN) {
 }
 
 const statusClient = new StatusClient(STATUS_URL, 5000, debugRoku)
-const discord = new DiscordClient(debugDiscord)
+const discord = new DiscordClient(debugDiscord, IMAGE_URL)
 
 ;(async () => {
   try {

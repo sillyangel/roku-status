@@ -2,6 +2,8 @@ const WebSocket = require('ws')
 
 class DiscordClient {
   constructor(debug = false) {
+    // compatibility: second arg imageUrl may be provided; handled below
+    const imageUrl = arguments[1]
     this.ws = null
     this.heartbeatInterval = null
     this.heartbeatTimer = null
@@ -9,6 +11,8 @@ class DiscordClient {
     this.sessionId = null
     this.connected = false
     this.debug = !!debug
+    this.imageUrl = imageUrl || ''
+    this.startedAt = null // epoch ms when device powered on
   }
 
   connect(token) {
@@ -103,13 +107,27 @@ class DiscordClient {
     this.ws.send(JSON.stringify(payload))
   }
 
-  async updatePresence({on, app}) {
+  async updatePresence({on, app, model}) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
     if (!on) {
       if (this.debug) console.log('Device is off; skipping presence update')
       return
     }
-    const activity = {name: `${app || 'App'}`, type: 0, details: `${app} is active`, state: 'On'}
+
+    // set startedAt when device first powers on; keep across app switches
+    if (!this.startedAt) this.startedAt = Date.now()
+
+    const activity = {
+      name: model || (app || 'App'),
+      type: 0,
+      details: app ? `${app}` : '',
+      state: 'On',
+      timestamps: {start: Math.floor(this.startedAt / 1000)},
+      assets: {
+        large_image: this.imageUrl || undefined,
+        large_text: model || ''
+      }
+    }
 
     const presence = {
       op: 3,
@@ -120,15 +138,17 @@ class DiscordClient {
         afk: false
       }
     }
-    if (this.debug) console.log('GW -> presence', JSON.stringify(presence))
+    if (this.debug) console.log('[DISCORD] GW -> presence', JSON.stringify(presence))
     this.ws.send(JSON.stringify(presence))
   }
 
   clearPresence() {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
     const presence = {op: 3, d: {since: null, activities: [], status: 'online', afk: false}}
-    if (this.debug) console.log('GW -> clear presence', JSON.stringify(presence))
+    if (this.debug) console.log('[DISCORD] GW -> clear presence', JSON.stringify(presence))
     this.ws.send(JSON.stringify(presence))
+    // reset start time because device is off
+    this.startedAt = null
   }
 
   cleanup() {
