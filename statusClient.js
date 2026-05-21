@@ -38,6 +38,7 @@ class StatusClient {
       // parse power-mode
       const pm = this._extractTag(devText, 'power-mode')
       const on = !!pm && /poweron/i.test(pm)
+      if (this.debug) console.log('[ROKU] parsed power-mode ->', JSON.stringify(pm), 'on=', on)
 
       // parse app name from active-app XML
       let app = ''
