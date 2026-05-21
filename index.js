@@ -5,15 +5,17 @@ const {DiscordClient} = require('./discordClient')
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 const STATUS_URL = process.env.STATUS_URL || ''
 const POLL_MS = parseInt(process.env.POLL_MS || '5000', 10)
-const DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true'
+const DEBUG_RAW = (process.env.DEBUG || '').toString().toLowerCase()
+const debugRoku = DEBUG_RAW === 'both' || DEBUG_RAW === 'roku' || DEBUG_RAW === '1' || DEBUG_RAW === 'true'
+const debugDiscord = DEBUG_RAW === 'both' || DEBUG_RAW === 'discord' || DEBUG_RAW === '1' || DEBUG_RAW === 'true'
 
 if (!DISCORD_TOKEN) {
   console.error('Please set DISCORD_TOKEN in .env or environment')
   process.exit(1)
 }
 
-const statusClient = new StatusClient(STATUS_URL, 5000, DEBUG)
-const discord = new DiscordClient(DEBUG)
+const statusClient = new StatusClient(STATUS_URL, 5000, debugRoku)
+const discord = new DiscordClient(debugDiscord)
 
 ;(async () => {
   try {

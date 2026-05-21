@@ -17,6 +17,7 @@ Environment
 - `DISCORD_TOKEN` — your Discord user token (see note below).
 - `STATUS_URL` — optional HTTP endpoint that returns JSON `{ "on": true, "app": "AppName" }`.
 - `POLL_MS` — polling interval in milliseconds (default 5000).
+ - `DEBUG` — logging mode: `both` to show Roku+Discord logs, `roku` to show Roku logs only, `discord` to show Discord logs only. `true` or `1` enables both.
 
 Notes
 
