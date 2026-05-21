@@ -91,9 +91,21 @@ StatusClient.prototype._normalizeBase = function (raw) {
 }
 
 StatusClient.prototype._extractTag = function (xml, tag) {
+  // try regex first
   const re = new RegExp(`<${tag}[^>]*>([\s\S]*?)<\/${tag}>`, 'i')
   const m = xml.match(re)
-  return m ? m[1].trim() : ''
+  if (m && m[1]) return m[1].trim()
+
+  // fallback: find opening tag and closing tag using indexOf (more robust against weird spacing)
+  const open = xml.toLowerCase().indexOf(`<${tag}`)
+  if (open === -1) return ''
+  const gt = xml.indexOf('>', open)
+  if (gt === -1) return ''
+  const closeTag = `</${tag}>`
+  const close = xml.toLowerCase().indexOf(closeTag, gt)
+  if (close === -1) return ''
+  const content = xml.substring(gt + 1, close)
+  return content.trim()
 }
 
 module.exports = {StatusClient}
