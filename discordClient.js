@@ -122,7 +122,8 @@ class DiscordClient {
       type: 0,
       details: app ? `${app}` : '',
       state: 'On',
-      timestamps: {start: Math.floor(this.startedAt / 1000)},
+      // Discord expects timestamps in milliseconds
+      timestamps: {start: this.startedAt},
       assets: {
         large_image: this.imageUrl || undefined,
         large_text: model || ''
