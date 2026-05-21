@@ -27,8 +27,8 @@
         try {
           const res = await fetch('/roku/off', {method: 'POST'})
           const data = await res.json()
-          if (res.ok) status.textContent = 'Power command sent.'
-          else status.textContent = 'Error: ' + (data.error || res.status)
+          if (res.ok) status.textContent = 'Power command sent. Your IP: ' + (data.ip || 'unknown')
+          else status.textContent = 'Error: ' + (data.error || res.status) + ' (Your IP: ' + (data.ip || 'unknown') + ')'
         } catch (err) {
           status.textContent = 'Error: ' + err.message
         }
