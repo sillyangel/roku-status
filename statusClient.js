@@ -11,18 +11,46 @@ class StatusClient {
   async fetchStatus() {
     if (!this.url) return this._mockStatus()
 
+    // Normalize input: allow bare IP, host, host:port, or full URL
+    const base = this._normalizeBase(this.url)
+
     try {
       const controller = new AbortController()
       const id = setTimeout(() => controller.abort(), this.timeoutMs)
 
-      const res = await fetch(this.url, {signal: controller.signal, cache: 'no-store'})
+      // Query device-info for power-mode
+      const devRes = await fetch(`${base}/query/device-info`, {signal: controller.signal, cache: 'no-store'})
+      const devText = await devRes.text()
+      if (this.debug) console.log('Fetch', `${base}/query/device-info`, '->', devRes.status, devText)
+
+      // Query active app (may 404)
+      let appText = ''
+      try {
+        const appRes = await fetch(`${base}/query/active-app`, {signal: controller.signal, cache: 'no-store'})
+        appText = await appRes.text()
+        if (this.debug) console.log('Fetch', `${base}/query/active-app`, '->', appRes.status, appText)
+      } catch (e) {
+        if (this.debug) console.warn('Failed to fetch active-app:', e && e.message)
+      }
+
       clearTimeout(id)
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      if (this.debug) console.log('Fetch', this.url, '->', res.status, JSON.stringify(data))
-      // expect { on: boolean, app: string }
-      const out = {on: !!data.on, app: data.app || ''}
+      // parse power-mode
+      const pm = this._extractTag(devText, 'power-mode')
+      const on = !!pm && /poweron/i.test(pm)
+
+      // parse app name from active-app XML
+      let app = ''
+      if (appText) {
+        const name = this._extractTag(appText, 'name')
+        if (name) app = name.trim()
+        else {
+          const appMatch = appText.match(/<app[^>]*>([^<]+)<\/app>/i)
+          if (appMatch) app = appMatch[1].trim()
+        }
+      }
+
+      const out = {on, app}
       this._last = out
       return out
     } catch (err) {
@@ -43,6 +71,28 @@ class StatusClient {
     this._last = {on: !this._last.on, app: this._last.on ? '' : 'SampleApp'}
     return this._last
   }
+}
+
+// helper methods
+StatusClient.prototype._normalizeBase = function (raw) {
+  let s = raw.trim()
+  if (/^https?:\/\//i.test(s)) {
+    return s.replace(/\/$/, '')
+  }
+  // bare IP or host with optional port
+  if (/^[\d.]+(:\d+)?$/.test(s) || /^[^:\/]+:\d+$/.test(s) || /^[^:\/]+$/.test(s)) {
+    // if port specified, keep it; otherwise default to 8060
+    if (!s.includes(':')) s = `${s}:8060`
+    return `http://${s}`
+  }
+  // otherwise attempt to use as-is with http
+  return `http://${s}`
+}
+
+StatusClient.prototype._extractTag = function (xml, tag) {
+  const re = new RegExp(`<${tag}[^>]*>([\s\S]*?)<\/${tag}>`, 'i')
+  const m = xml.match(re)
+  return m ? m[1].trim() : ''
 }
 
 module.exports = {StatusClient}
