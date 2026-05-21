@@ -1,13 +1,14 @@
 const WebSocket = require('ws')
 
 class DiscordClient {
-  constructor() {
+  constructor(debug = false) {
     this.ws = null
     this.heartbeatInterval = null
     this.heartbeatTimer = null
     this.seq = null
     this.sessionId = null
     this.connected = false
+    this.debug = !!debug
   }
 
   connect(token) {
@@ -25,6 +26,7 @@ class DiscordClient {
       this.ws.on('message', (data) => {
         try {
           const msg = JSON.parse(data.toString())
+          if (this.debug) console.log('GW <-', JSON.stringify(msg))
           this.handleMessage(msg, token)
         } catch (err) {
           console.warn('Failed to parse gateway message', err)
@@ -103,19 +105,29 @@ class DiscordClient {
 
   async updatePresence({on, app}) {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
-    const activity = on
-      ? {name: `${app || 'App'}`, type: 0, details: `${app} is active`, state: 'On'}
-      : {name: 'Idle', type: 0, details: 'Device is off', state: 'Off'}
+    if (!on) {
+      if (this.debug) console.log('Device is off; skipping presence update')
+      return
+    }
+    const activity = {name: `${app || 'App'}`, type: 0, details: `${app} is active`, state: 'On'}
 
     const presence = {
       op: 3,
       d: {
         since: null,
         activities: [activity],
-        status: on ? 'online' : 'idle',
+        status: 'online',
         afk: false
       }
     }
+    if (this.debug) console.log('GW -> presence', JSON.stringify(presence))
+    this.ws.send(JSON.stringify(presence))
+  }
+
+  clearPresence() {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
+    const presence = {op: 3, d: {since: null, activities: [], status: 'online', afk: false}}
+    if (this.debug) console.log('GW -> clear presence', JSON.stringify(presence))
     this.ws.send(JSON.stringify(presence))
   }
 

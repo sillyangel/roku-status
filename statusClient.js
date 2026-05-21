@@ -1,10 +1,11 @@
 const DEFAULT_TIMEOUT = 5000
 
 class StatusClient {
-  constructor(url, timeoutMs = DEFAULT_TIMEOUT) {
+  constructor(url, timeoutMs = DEFAULT_TIMEOUT, debug = false) {
     this.url = url
     this._last = null
     this.timeoutMs = timeoutMs
+    this.debug = !!debug
   }
 
   async fetchStatus() {
@@ -19,6 +20,7 @@ class StatusClient {
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
+      if (this.debug) console.log('Fetch', this.url, '->', res.status, JSON.stringify(data))
       // expect { on: boolean, app: string }
       const out = {on: !!data.on, app: data.app || ''}
       this._last = out
@@ -26,6 +28,7 @@ class StatusClient {
     } catch (err) {
       if (err.name === 'AbortError') console.warn('Failed to fetch status: request timed out')
       else console.warn('Failed to fetch status:', err.message)
+      if (this.debug) console.error('Fetch error for', this.url, err)
       return this._last || {on: false, app: ''}
     }
   }

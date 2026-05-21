@@ -5,14 +5,15 @@ const {DiscordClient} = require('./discordClient')
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN
 const STATUS_URL = process.env.STATUS_URL || ''
 const POLL_MS = parseInt(process.env.POLL_MS || '5000', 10)
+const DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true'
 
 if (!DISCORD_TOKEN) {
   console.error('Please set DISCORD_TOKEN in .env or environment')
   process.exit(1)
 }
 
-const statusClient = new StatusClient(STATUS_URL)
-const discord = new DiscordClient()
+const statusClient = new StatusClient(STATUS_URL, 5000, DEBUG)
+const discord = new DiscordClient(DEBUG)
 
 ;(async () => {
   try {
@@ -26,11 +27,19 @@ const discord = new DiscordClient()
 
   const poll = async () => {
     const s = await statusClient.fetchStatus()
-    const newState = `${s.on ? 'on' : 'off'}:${s.app || ''}`
-    if (newState !== lastState) {
-      console.log('Status changed ->', s)
-      await discord.updatePresence(s)
-      lastState = newState
+    if (s.on) {
+      const newState = `on:${s.app || ''}`
+      if (newState !== lastState) {
+        console.log('Status changed ->', s)
+        await discord.updatePresence(s)
+        lastState = newState
+      }
+    } else {
+      if (lastState !== 'off') {
+        console.log('Device is off; clearing presence')
+        discord.clearPresence()
+        lastState = 'off'
+      }
     }
   }
 
