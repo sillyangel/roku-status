@@ -37,7 +37,7 @@ class StatusClient {
 
       // parse power-mode
       const pm = this._extractTag(devText, 'power-mode')
-      const on = !!pm && /poweron/i.test(pm)
+      const on = !!pm && /(poweron|headless)/i.test(pm)
       if (this.debug) console.log('[ROKU] parsed power-mode ->', JSON.stringify(pm), 'on=', on)
 
       // parse model name
